@@ -1,0 +1,2548 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relleno Sanitario Los Ríos - Dashboard Inteligente</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0a4d68;
+            --secondary: #05bfdb;
+            --accent: #00ffca;
+            --warning: #ff6b6b;
+            --success: #1dd1a1;
+            --light: #f8f9fa;
+            --dark: #1e272e;
+            --text: #2c3e50;
+            --text-light: #7f8c8d;
+            --card-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+            --sidebar-width: 280px;
+            --header-height: 80px;
+            --gradient-primary: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            --gradient-card: linear-gradient(120deg, #ffffff 0%, #f8f9fa 100%);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Montserrat', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f0f5f9;
+            color: var(--text);
+            line-height: 1.6;
+            display: flex;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .leaflet-container .leaflet-control-attribution {
+            display: none !important;
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--gradient-primary);
+            color: white;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            padding: 1.5rem 1rem;
+            overflow-y: auto;
+            transition: all 0.3s ease;
+            z-index: 1000;
+            box-shadow: 5px 0 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .sidebar-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .sidebar-header h2 {
+            font-size: 1.4rem;
+            font-weight: 600;
+        }
+        
+        .sidebar-menu {
+            list-style: none;
+        }
+        
+        .sidebar-menu li {
+            margin-bottom: 0.5rem;
+        }
+        
+        .sidebar-menu a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 0.8rem 1rem;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .sidebar-menu a:hover, .sidebar-menu a.active {
+            background-color: rgba(255, 255, 255, 0.15);
+            transform: translateX(5px);
+        }
+        
+        .sidebar-menu i {
+            width: 20px;
+            text-align: center;
+        }
+        
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: var(--sidebar-width);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            transition: margin-left 0.3s ease;
+        }
+        
+        /* Header */
+        header {
+            background: white;
+            height: var(--header-height);
+            padding: 0 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .page-title {
+            color: var(--primary);
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+        
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .user-avatar {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background: var(--gradient-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            position: relative;
+        }
+        
+        .user-status {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 12px;
+            height: 12px;
+            background-color: var(--success);
+            border: 2px solid white;
+            border-radius: 50%;
+        }
+        
+        .user-info {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .user-name {
+            font-weight: 600;
+            color: var(--primary);
+        }
+        
+        .user-role {
+            font-size: 0.8rem;
+            color: var(--text-light);
+        }
+        
+        /* Main layout */
+        .dashboard {
+            flex: 1;
+            padding: 2rem;
+            max-width: 1600px;
+            width: 100%;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        @media (max-width: 1100px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* Cards */
+        .card {
+            background: var(--gradient-card);
+            border-radius: 16px;
+            box-shadow: var(--card-shadow);
+            padding: 1.8rem;
+            transition: all 0.3s ease;
+            border-left: 4px solid var(--secondary);
+            overflow: hidden;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.12);
+        }
+        
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.8rem;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
+        
+        .card-header h3 {
+            color: var(--primary);
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+        
+        .card-header i {
+            color: var(--secondary);
+            font-size: 1.3rem;
+        }
+        
+        /* Info grid */
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+        
+        .info-item {
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
+            transition: all 0.3s ease;
+        }
+        
+        .info-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.05);
+        }
+        
+        .info-label {
+            font-size: 0.8rem;
+            color: var(--text-light);
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+        
+        .info-value {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--primary);
+        }
+        
+        .info-value.large {
+            font-size: 1.3rem;
+        }
+        
+        /* Status badges */
+        .status-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .status-construction {
+            background-color: rgba(255, 107, 107, 0.15);
+            color: var(--warning);
+        }
+        
+        .status-completed {
+            background-color: rgba(29, 209, 161, 0.15);
+            color: var(--success);
+        }
+        
+        /* Map container */
+        .map-container {
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: var(--card-shadow);
+            height: 500px;
+            position: relative;
+            grid-column: 1 / -1;
+        }
+        
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .map-overlay {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 1rem;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            max-width: 280px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .map-overlay h4 {
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+        }
+        
+        .map-overlay p {
+            font-size: 0.85rem;
+            color: var(--text-light);
+            line-height: 1.5;
+        }
+        
+        /* Map controls */
+        .map-controls {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 1rem;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            max-width: 250px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .map-controls h4 {
+            color: var(--primary);
+            margin-bottom: 0.8rem;
+            font-size: 1rem;
+        }
+        
+        .control-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 0.8rem;
+        }
+        
+        .control-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .control-item input {
+            accent-color: var(--primary);
+        }
+        
+        .control-item label {
+            font-size: 0.9rem;
+            color: var(--text);
+            cursor: pointer;
+        }
+        
+        /* Map info box */
+        .map-info-box {
+            position: absolute;
+            bottom: 15px;
+            left: 15px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 1rem;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            max-width: 300px;
+            backdrop-filter: blur(10px);
+            display: none;
+        }
+        
+        .map-info-box h4 {
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+        }
+        
+        .map-info-box p {
+            font-size: 0.85rem;
+            color: var(--text-light);
+            line-height: 1.5;
+            margin-bottom: 0.8rem;
+        }
+        
+        .map-info-box .info-gallery {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+            margin-bottom: 0.8rem;
+        }
+        
+        .info-gallery img {
+            width: 100%;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+        
+        .close-info {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            color: var(--text-light);
+        }
+        
+        /* Map Navigation */
+        .map-navigation {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin: 1.5rem 0;
+            grid-column: 1 / -1;
+        }
+        
+        .map-nav-btn {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        
+        .map-nav-btn:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(10, 77, 104, 0.2);
+        }
+        
+        .map-nav-btn i {
+            font-size: 1.1rem;
+        }
+        
+        /* Chart containers */
+        .chart-container {
+            height: 320px;
+            position: relative;
+            margin-top: 1.5rem;
+        }
+        
+        /* Footer */
+        footer {
+            background: var(--dark);
+            color: white;
+            padding: 2rem;
+            margin-top: 3rem;
+        }
+        
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+        
+        .footer-logo {
+            margin-bottom: 1.5rem;
+        }
+        
+        .footer-logo h3 {
+            font-size: 1.5rem;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+        }
+        
+        .footer-logo p {
+            color: rgba(255, 255, 255, 0.8);
+            max-width: 600px;
+            line-height: 1.6;
+        }
+        
+        .footer-contact {
+            margin: 1.5rem 0;
+        }
+        
+        .contact-item {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 0.8rem;
+        }
+        
+        .contact-item i {
+            color: var(--accent);
+        }
+        
+        .footer-social {
+            display: flex;
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+        
+        .social-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            transition: all 0.3s ease;
+        }
+        
+        .social-icon:hover {
+            background: var(--accent);
+            transform: translateY(-3px);
+        }
+        
+        .footer-bottom {
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            width: 100%;
+        }
+        
+        .footer-partners {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .partner-logo {
+            height: 40px;
+            filter: brightness(0) invert(1);
+            opacity: 0.8;
+            transition: opacity 0.3s ease;
+        }
+        
+        .partner-logo:hover {
+            opacity: 1;
+        }
+        
+        .footer-copyright {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.9rem;
+        }
+        
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .dashboard {
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            }
+        }
+        
+        @media (max-width: 992px) {
+            .sidebar {
+                transform: translateX(-100%);
+                width: 250px;
+            }
+            
+            .sidebar.active {
+                transform: translateX(0);
+            }
+            
+            .main-content {
+                margin-left: 0;
+                width: 100%;
+            }
+            
+            .menu-toggle {
+                display: block;
+            }
+            
+            .dashboard {
+                padding: 1.5rem;
+                grid-template-columns: 1fr;
+            }
+            
+            .info-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .map-overlay, .map-controls {
+                max-width: 200px;
+                padding: 0.8rem;
+            }
+            
+            header {
+                padding: 0 1rem;
+            }
+            
+            .user-info {
+                display: none;
+            }
+            
+            .map-navigation {
+                overflow-x: auto;
+                padding-bottom: 10px;
+                flex-wrap: nowrap;
+            }
+            
+            .map-nav-btn {
+                white-space: nowrap;
+                flex-shrink: 0;
+            }
+            
+            .map-info-box {
+                max-width: 250px;
+            }
+            
+            .footer-content {
+                padding: 0 1rem;
+            }
+            
+            .footer-partners {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .card-header h3 {
+                font-size: 1.1rem;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard {
+                padding: 1rem;
+                gap: 1rem;
+            }
+            
+            .card {
+                padding: 1.2rem;
+            }
+            
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .map-container {
+                height: 400px;
+            }
+            
+            .map-overlay, .map-controls {
+                max-width: 160px;
+                padding: 0.6rem;
+                font-size: 0.8rem;
+            }
+            
+            .map-overlay h4, .map-controls h4 {
+                font-size: 0.9rem;
+            }
+            
+            .map-navigation {
+                gap: 8px;
+            }
+            
+            .map-nav-btn {
+                padding: 0.8rem 1rem;
+                font-size: 0.9rem;
+            }
+            
+            .section-title {
+                font-size: 1.4rem;
+                margin: 1.5rem 0 1rem;
+            }
+            
+            .kpi-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1rem;
+            }
+            
+            .kpi-card {
+                padding: 1rem;
+            }
+            
+            .kpi-value {
+                font-size: 1.5rem;
+            }
+            
+            .comunas-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .chart-container {
+                height: 250px;
+            }
+            
+            .data-table {
+                display: block;
+                overflow-x: auto;
+            }
+            
+            .tabs {
+                overflow-x: auto;
+                white-space: nowrap;
+                padding-bottom: 5px;
+            }
+            
+            .tab-btn {
+                padding: 0.6rem 1rem;
+                font-size: 0.9rem;
+            }
+            
+            footer {
+                padding: 1.5rem 1rem;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            header {
+                height: 70px;
+            }
+            
+            .page-title {
+                font-size: 1.2rem;
+            }
+            
+            .user-avatar {
+                width: 35px;
+                height: 35px;
+            }
+            
+            .dashboard {
+                padding: 0.8rem;
+            }
+            
+            .card {
+                padding: 1rem;
+                border-radius: 12px;
+            }
+            
+            .card-header {
+                margin-bottom: 1rem;
+            }
+            
+            .card-header h3 {
+                font-size: 1rem;
+            }
+            
+            .card-header i {
+                font-size: 1.1rem;
+            }
+            
+            .info-item {
+                padding: 0.8rem;
+            }
+            
+            .info-value {
+                font-size: 1rem;
+            }
+            
+            .info-value.large {
+                font-size: 1.1rem;
+            }
+            
+            .map-container {
+                height: 350px;
+                border-radius: 12px;
+            }
+            
+            .map-overlay, .map-controls {
+                max-width: 140px;
+                padding: 0.5rem;
+            }
+            
+            .map-overlay p, .control-item label {
+                font-size: 0.75rem;
+            }
+            
+            .map-navigation {
+                margin: 1rem 0;
+            }
+            
+            .map-nav-btn {
+                padding: 0.6rem 0.8rem;
+                font-size: 0.8rem;
+            }
+            
+            .map-nav-btn i {
+                font-size: 0.9rem;
+            }
+            
+            .kpi-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .kpi-value {
+                font-size: 1.8rem;
+            }
+            
+            .section-title {
+                font-size: 1.3rem;
+                margin: 1rem 0;
+            }
+            
+            .progress-label {
+                font-size: 0.9rem;
+            }
+            
+            .data-table th, .data-table td {
+                padding: 0.6rem;
+                font-size: 0.85rem;
+            }
+            
+            .comuna-card {
+                padding: 1rem;
+            }
+            
+            .comuna-header h4 {
+                font-size: 1rem;
+            }
+            
+            .stat-label, .stat-value {
+                font-size: 0.9rem;
+            }
+            
+            .chart-container {
+                height: 200px;
+                margin-top: 1rem;
+            }
+            
+            .installation-status .status-header {
+                flex-direction: column;
+                gap: 0.3rem;
+            }
+            
+            .status-name, .status-value {
+                font-size: 0.9rem;
+            }
+            
+            footer {
+                padding: 1rem 0.8rem;
+                margin-top: 2rem;
+            }
+            
+            .footer-logo h3 {
+                font-size: 1.3rem;
+            }
+            
+            .footer-logo p {
+                font-size: 0.9rem;
+            }
+            
+            .contact-item {
+                font-size: 0.9rem;
+            }
+            
+            .social-icon {
+                width: 35px;
+                height: 35px;
+            }
+            
+            .partner-logo {
+                height: 30px;
+            }
+            
+            .footer-copyright {
+                font-size: 0.8rem;
+            }
+        }
+
+        /* Menu Toggle Button (Mobile) */
+        .menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--primary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            margin-right: 1rem;
+        }
+        
+        @media (max-width: 992px) {
+            .menu-toggle {
+                display: block;
+            }
+        }
+
+        /* Section titles */
+        .section-title {
+            grid-column: 1 / -1;
+            color: var(--primary);
+            margin: 2rem 0 1.5rem;
+            padding-bottom: 0.8rem;
+            border-bottom: 2px solid var(--secondary);
+            font-size: 1.6rem;
+            font-weight: 700;
+        }
+        
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid #eee;
+            overflow-x: auto;
+            padding-bottom: 5px;
+        }
+        
+        .tab-btn {
+            padding: 0.8rem 1.5rem;
+            background: #f1f1f1;
+            border: none;
+            border-radius: 8px 8px 0 0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        
+        .tab-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Progress bars */
+        .progress-container {
+            margin: 1.5rem 0;
+        }
+        
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        
+        .progress-bar {
+            height: 12px;
+            background: #eee;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: var(--gradient-primary);
+            border-radius: 10px;
+            transition: width 1s ease;
+        }
+        
+        /* Data tables */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+        
+        .data-table th, .data-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .data-table th {
+            background: var(--light);
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .data-table tr:hover {
+            background: #f9f9f9;
+        }
+        
+        /* KPI Cards */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .kpi-card {
+            background: var(--gradient-card);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: var(--card-shadow);
+            text-align: center;
+            transition: all 0.3s ease;
+            border-top: 4px solid var(--secondary);
+        }
+        
+        .kpi-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        .kpi-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin: 0.8rem 0;
+        }
+        
+        .kpi-label {
+            font-size: 0.9rem;
+            color: var(--text-light);
+            font-weight: 500;
+        }
+        
+        /* Indicator dots */
+        .indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .indicator.good {
+            background: var(--success);
+        }
+        
+        .indicator.warning {
+            background: var(--warning);
+        }
+        
+        .indicator.danger {
+            background: #e74c3c;
+        }
+        
+        /* Animation for cards */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .card {
+            animation: fadeIn 0.5s ease;
+        }
+        
+        /* Comunas section */
+        .comunas-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+        
+        .comuna-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: var(--card-shadow);
+            transition: all 0.3s ease;
+            border-left: 4px solid var(--secondary);
+        }
+        
+        .comuna-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        .comuna-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 1rem;
+        }
+        
+        .comuna-header h4 {
+            color: var(--primary);
+            font-size: 1.1rem;
+        }
+        
+        .comuna-header i {
+            color: var(--secondary);
+        }
+        
+        .comuna-data {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .comuna-stat {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .comuna-stat:last-child {
+            border-bottom: none;
+        }
+        
+        .stat-label {
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .stat-value {
+            font-weight: 600;
+            color: var(--primary);
+        }
+        
+        /* Estado de Instalaciones */
+        .installation-status {
+            margin-top: 1rem;
+        }
+        
+        .status-item {
+            margin-bottom: 1.2rem;
+        }
+        
+        .status-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+        
+        .status-name {
+            font-weight: 600;
+            color: var(--primary);
+        }
+        
+        .status-value {
+            font-weight: 600;
+            color: var(--primary);
+        }
+        
+        /* Responsive table */
+        @media (max-width: 768px) {
+            .data-table {
+                display: block;
+                width: 100%;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            .data-table th, 
+            .data-table td {
+                min-width: 120px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <i class="fas fa-recycle fa-2x"></i>
+            <h2>Relleno Sanitario</h2>
+        </div>
+        
+        <ul class="sidebar-menu">
+            <li><a href="#" class="active"><i class="fas fa-home"></i> Dashboard</a></li>
+            <li><a href="#"><i class="fas fa-user"></i> Personal</a></li>
+            <li><a href="#"><i class="fas fa-microchip"></i> Sensores</a></li>
+            <li><a href="#"><i class="fas fa-chart-line"></i> Estadísticas</a></li>
+            <li><a href="#"><i class="fas fa-calendar-alt"></i> Cronograma</a></li>
+            <li><a href="#"><i class="fas fa-map-marked"></i> Comunas</a></li>
+            <li><a href="#"><i class="fas fa-file-alt"></i> Reportes</a></li>
+            <li><a href="#"><i class="fas fa-envelope"></i> Contacto</a></li>
+            <li><a href="#"><i class="fas fa-cog"></i> Configuración</a></li>
+            <li><a href="#"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</a></li>
+        </ul>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Header -->
+        <header>
+            <button class="menu-toggle">
+                <i class="fas fa-bars"></i>
+            </button>
+            
+            <h1 class="page-title">Dashboard de Monitoreo Inteligente</h1>
+            
+            <div class="user-profile">
+                <div class="user-avatar">
+                    CA
+                    <span class="user-status"></span>
+                </div>
+                <div class="user-info">
+                    <span class="user-name">Carla Amtmann</span>
+                    <span class="user-role">Alcaldesa de Valdivia</span>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Dashboard Content -->
+        <div class="dashboard">
+            <!-- Mapa -->
+            <h2 class="section-title">Ubicación en el Mapa</h2>
+            <div class="map-container">
+                <div id="map"></div>
+                <div class="map-overlay">
+                    <h4>Relleno Sanitario Los Ríos</h4>
+                    <p>Ubicado en el sector de Morrompulli, a 25 km al sur de Valdivia por la Ruta T-60. Instalación de vanguardia en gestión de residuos.</p>
+                </div>
+                
+                <div class="map-controls">
+                    <h4>Capas del Mapa</h4>
+                    <div class="control-item">
+                        <input type="checkbox" id="layer-vertedero" checked>
+                        <label for="layer-vertedero">Límite del Vertedero</label>
+                    </div>
+                    <div class="control-item">
+                        <input type="checkbox" id="layer-obras" checked>
+                        <label for="layer-obras">Obras en Construcción</label>
+                    </div>
+                    <div class="control-item">
+                        <input type="checkbox" id="layer-rutas" checked>
+                        <label for="layer-rutas">Rutas de Acceso</label>
+                    </div>
+                    <div class="control-item">
+                        <input type="checkbox" id="layer-sensores" checked>
+                        <label for="layer-sensores">Sensores Ambientales</label>
+                    </div>
+                </div>
+                
+                <div class="map-info-box" id="mapInfoBox">
+                    <button class="close-info">&times;</button>
+                    <h4 id="infoTitle">Título</h4>
+                    <p id="infoDescription">Descripción</p>
+                    <div class="info-gallery" id="infoGallery">
+                        <!-- Imágenes se insertarán aquí -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Navegación del Mapa -->
+            <div class="map-navigation">
+                <div class="map-nav-btn" data-location="entrada">
+                    <i class="fas fa-door-open"></i> Entrada Principal
+                </div>
+                <div class="map-nav-btn" data-location="oficina">
+                    <i class="fas fa-building"></i> Oficina Administrativa
+                </div>
+                <div class="map-nav-btn" data-location="bascula">
+                    <i class="fas fa-weight-hanging"></i> Báscula
+                </div>
+                <div class="map-nav-btn" data-location="vertedero">
+                    <i class="fas fa-trash"></i> Vertedero Actual
+                </div>
+                <div class="map-nav-btn" data-location="tratamiento">
+                    <i class="fas fa-tint"></i> Tratamiento Lixiviados
+                </div>
+                <div class="map-nav-btn" data-location="laboratorio">
+                    <i class="fas fa-flask"></i> Laboratorio
+                </div>
+            </div>
+
+            <!-- Indicadores Clave -->
+            <h2 class="section-title">Indicadores Clave de Rendimiento</h2>
+            
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <i class="fas fa-trash" style="font-size: 2.2rem; color: var(--secondary);"></i>
+                    <div class="kpi-value">320 Tn</div>
+                    <div class="kpi-label">Residuos Diarios</div>
+                </div>
+                <div class="kpi-card">
+                    <i class="fas fa-tint" style="font-size: 2.2rem; color: var(--secondary);"></i>
+                    <div class="kpi-value">85 m³</div>
+                    <div class="kpi-label">Lixiviados Tratados</div>
+                </div>
+                <div class="kpi-card">
+                    <i class="fas fa-fire" style="font-size: 2.2rem; color: var(--secondary);"></i>
+                    <div class="kpi-value">65%</div>
+                    <div class="kpi-label">Metano Capturado</div>
+                </div>
+                <div class="kpi-card">
+                    <i class="fas fa-chart-line" style="font-size: 2.2rem; color: var(--secondary);"></i>
+                    <div class="kpi-value">78%</div>
+                    <div class="kpi-label">Capacidad Utilizada</div>
+                </div>
+            </div>
+
+            <!-- Información General -->
+            <h2 class="section-title">Información General</h2>
+            
+            <!-- Ubicación -->
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <h3>Ubicación</h3>
+                </div>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Sector</div>
+                        <div class="info-value">Morrompulli</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Distancia de Valdivia</div>
+                        <div class="info-value">25 km al sur</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Acceso</div>
+                        <div class="info-value">Camino T-60</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Coordenadas</div>
+                        <div class="info-value">-39.9788, -73.1353</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Dimensiones -->
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-ruler-combined"></i>
+                    <h3>Dimensiones</h3>
+                </div>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Área Total</div>
+                        <div class="info-value large">90.8 hectáreas</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Área Preparada</div>
+                        <div class="info-value large">35.4 hectáreas</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Propiedad</div>
+                        <div class="info-value">Municipal</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Estado</div>
+                        <div class="info-value"><span class="status-badge status-construction">En Construcción</span></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Volumen y Capacidad -->
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-chart-bar"></i>
+                    <h3>Volumen y Capacidad</h3>
+                </div>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Volumen Total</div>
+                        <div class="info-value large">3.400.000 m³</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Volumen de Corte</div>
+                        <div class="info-value large">700.000 m³</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Cota Fondo</div>
+                        <div class="info-value">55 msnm</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Cota Coronamiento</div>
+                        <div class="info-value">115 msnm</div>
+                    </div>
+                </div>
+                <div class="progress-container">
+                    <div class="progress-label">
+                        <span>Capacidad Utilizada</span>
+                        <span>78%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 78%"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Estado de Instalaciones -->
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-hard-hat"></i>
+                    <h3>Estado de Instalaciones</h3>
+                </div>
+                <div class="installation-status">
+                    <div class="status-item">
+                        <div class="status-header">
+                            <span class="status-name">Sistema de Impermeabilización</span>
+                            <span class="status-value">85%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 85%"></div>
+                        </div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-header">
+                            <span class="status-name">Planta de Tratamiento</span>
+                            <span class="status-value">72%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 72%"></div>
+                        </div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-header">
+                            <span class="status-name">Sistema de Captura de Biogás</span>
+                            <span class="status-value">90%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 90%"></div>
+                        </div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-header">
+                            <span class="status-name">Vías de Acceso</span>
+                            <span class="status-value">95%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 95%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Gráfico de Camiones en el Tiempo -->
+            <div class="card" style="grid-column: 1 / -1;">
+                <div class="card-header">
+                    <i class="fas fa-truck"></i>
+                    <h3>Flujo de Camiones en el Tiempo</h3>
+                </div>
+                <div class="chart-container">
+                    <canvas id="trucksChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- Comunas de Los Ríos -->
+            <h2 class="section-title">Comunas de Los Ríos - Ingreso de Residuos</h2>
+            
+            <div class="card" style="grid-column: 1 / -1;">
+                <div class="card-header">
+                    <i class="fas fa-truck-loading"></i>
+                    <h3>Ingreso y Egreso de Camiones por Comuna</h3>
+                </div>
+                
+                <div class="tabs">
+                    <button class="tab-btn active" data-tab="norte">Zona Norte</button>
+                    <button class="tab-btn" data-tab="sur">Zona Sur</button>
+                    <button class="tab-btn" data-tab="costa">Zona Costa</button>
+                    <button class="tab-btn" data-tab="precordillera">Precordillera</button>
+                </div>
+                
+                <div class="tab-content active" id="norte-tab">
+                    <div class="comunas-grid">
+                        <!-- Valdivia -->
+                        <div class="comuna-card">
+                            <div class="comuna-header">
+                                <i class="fas fa-city"></i>
+                                <h4>Valdivia</h4>
+                            </div>
+                            <div class="comuna-data">
+                                <div class="comuna-stat">
+                                    <span class="stat-label">Camiones/día</span>
+                                    <span class="stat-value">45</span>
+                                </div>
+                                <div class="comuna-stat">
+                                    <span class="stat-label">Residuos (Tn/día)</span>
+                                    <span class="stat-value">120</span>
+                                </div>
+                                <div class="comuna-stat">
+                                    <span class="stat-label">Distancia (km)</span>
+                                    <span class="stat-value">25</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Lanco -->
+                        <div class="comuna-card">
+                            <div class="comuna-header">
+                                <i class="fas fa-city"></i>
+                                <h4>Lanco</h4>
+                            </div>
+                            <div class="comuna-data">
+                                <div class="comuna-stat">
+                                    <span class="stat-label">Camiones/día</span>
+                                    <span class="stat-value">8</span>
+                                </div>
+                                <div class="comuna-stat">
+                                    <span class="stat-label">Residuos (Tn/día)</span>
+                                    <span class="stat-value">18</span>
+                                </div>
+                                <div class="comuna-stat">
+                                    <span class="stat-label">Distancia (km)</span>
+                                    <span class="stat-value">52</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Máfil -->
+                        <div class="comuna-card">
+                            <div class="comuna-header">
+                                <i class="fas fa-city"></i>
+                                <h4>Máfil</h4>
+                            </div>
+                            <div class="comuna-data">
+                                <div class="comuna-stat">
+                                    <span class="stat-label">Camiones/día</span>
+                                    <span class="stat-value">5</span>
+                                </div>
+                                <div class="comuna-stat">
+                                    <span class="stat-label">Residuos (Tn/día)</span>
+                                    <span class="stat-value">12</span>
+                                </div>
+                                <div class="comuna-stat">
+                                    <span class="stat-label">Distancia (km)</span>
+                                    <span class="stat-value">38</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Mariquina -->
+                        <div class="comuna-card">
+                            <div class="comuna-header">
+                                <i class="fas fa-city"></i>
+                                <h4>Mariquina</h4>
+                            </div>
+                            <div class="comuna-data">
+                                <div class="comuna-stat">
+                                    <span class="stat-label">Camiones/día</span>
+                                    <span class="stat-value">10</span>
+                                </div>
+                                <div class="comuna-stat">
+                                    <span class="stat-label">Residuos (Tn/día)</span>
+                                    <span class="stat-value">25</span>
+                                </div>
+                                <div class="comuna-stat">
+                                    <span class="stat-label">Distancia (km)</span>
+                                    <span class="stat-value">60</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="tab-content" id="sur-tab">
+                    <div class="comunas-grid">
+                        <!-- La Unión -->
+                        <div class="comuna-card">
+                            <div class="comuna-header">
+                                <i class="fas fa-city"></i>
+                                <h4>La Unión</h4>
+                            </div>
+                            <div class="comuna-data">
+                                <div class="comuna-stat">
+                                    <span class="stat-label">Camiones/día</span>
+                                    <span class="stat-value">15</span>
+                                </div>
+                                <div class="comuna-stat">
+                                    <span class="stat-label">Residuos (Tn/día)</span>
+                                    <span class="stat-value">38</span>
+                                </div>
+                                <div class="comuna-stat">
+                                    <span class="stat-label">Distancia (km)</span>
+                                    <span class="stat-value">85</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Río Bueno -->
+                        <div class="comuna-card">
+                            <div class="comuna-header">
+                                <i class="fas fa-city"></i>
+                                <h4>Río Bueno</h4>
+                            </div>
+                            <div class="comuna-data">
+                                <div class="comuna-stat">
+                                    <span class="stat-label">Camiones/día</span>
+                                    <span class="stat-value">12</span>
+                                </div>
+                                <div class="comuna-stat">
+                                    <span class="stat-label">Residuos (Tn/día)</span>
+                                    <span class="stat-value">30</span>
+                                </div>
+                                <div class="comuna-stat">
+                                    <span class="stat-label">Distancia (km)</span>
+                                    <span class="stat-value">78</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Futrono -->
+                        <div class="comuna-card">
+                            <div class="comuna-header">
+                                <i class="fas fa-city"></i>
+                                <h4>Futrono</h4>
+                            </div>
+                            <div class="comuna-data">
+                                <div class="comuna-stat">
+                                    <span class="stat-label">Camiones/día</span>
+                                    <span class="stat-value">7</span>
+                                </div>
+                                <div class="comuna-stat">
+                                    <span class="stat-label">Residuos (Tn/día)</span>
+                                    <span class="stat-value">16</span>
+                                </div>
+                                <div class="comuna-stat">
+                                    <span class="stat-label">Distancia (km)</span>
+                                    <span class="stat-value">95</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Lago Ranco -->
+                        <div class="comuna-card">
+                            <div class="comuna-header">
+                                <i class="fas fa-city"></i>
+                                <h4>Lago Ranco</h4>
+                            </div>
+                            <div class="comuna-data">
+                                <div class="comuna-stat">
+                                    <span class="stat-label">Camiones/día</span>
+                                    <span class="stat-value">6</span>
+                                </div>
+                                <div class="comuna-stat">
+                                    <span class="stat-label">Residuos (Tn/día)</span>
+                                    <span class="stat-value">14</span>
+                                </div>
+                                <div class="comuna-stat">
+                                    <span class="stat-label">Distancia (km)</span>
+                                    <span class="stat-value">105</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="tab-content" id="costa-tab">
+                    <div class="comunas-grid">
+                        <!-- Corral -->
+                        <div class="comuna-card">
+                            <div class="comuna-header">
+                                <i class="fas fa-city"></i>
+                                <h4>Corral</h4>
+                            </div>
+                            <div class="comuna-data">
+                                <div class="comuna-stat">
+                                    <span class="stat-label">Camiones/día</span>
+                                    <span class="stat-value">4</span>
+                                </div>
+                                <div class="comuna-stat">
+                                    <span class="stat-label">Residuos (Tn/día)</span>
+                                    <span class="stat-value">9</span>
+                                </div>
+                                <div class="comuna-stat">
+                                    <span class="stat-label">Distancia (km)</span>
+                                    <span class="stat-value">48</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Los Lagos -->
+                        <div class="comuna-card">
+                            <div class="comuna-header">
+                                <i class="fas fa-city"></i>
+                                <h4>Los Lagos</h4>
+                            </div>
+                            <div class="comuna-data">
+                                <div class="comuna-stat">
+                                    <span class="stat-label">Camiones/día</span>
+                                    <span class="stat-value">8</span>
+                                </div>
+                                <div class="comuna-stat">
+                                    <span class="stat-label">Residuos (Tn/día)</span>
+                                    <span class="stat-value">20</span>
+                                </div>
+                                <div class="comuna-stat">
+                                    <span class="stat-label">Distancia (km)</span>
+                                    <span class="stat-value">35</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="tab-content" id="precordillera-tab">
+                    <div class="comunas-grid">
+                        <!-- Panguipulli -->
+                        <div class="comuna-card">
+                            <div class="comuna-header">
+                                <i class="fas fa-city"></i>
+                                <h4>Panguipulli</h4>
+                            </div>
+                            <div class="comuna-data">
+                                <div class="comuna-stat">
+                                    <span class="stat-label">Camiones/día</span>
+                                    <span class="stat-value">11</span>
+                                </div>
+                                <div class="comuna-stat">
+                                    <span class="stat-label">Residuos (Tn/día)</span>
+                                    <span class="stat-value">26</span>
+                                </div>
+                                <div class="comuna-stat">
+                                    <span class="stat-label">Distancia (km)</span>
+                                    <span class="stat-value">90</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Paillaco -->
+                        <div class="comuna-card">
+                            <div class="comuna-header">
+                                <i class="fas fa-city"></i>
+                                <h4>Paillaco</h4>
+                            </div>
+                            <div class="comuna-data">
+                                <div class="comuna-stat">
+                                    <span class="stat-label">Camiones/día</span>
+                                    <span class="stat-value">9</span>
+                                </div>
+                                <div class="comuna-stat">
+                                    <span class="stat-label">Residuos (Tn/día)</span>
+                                    <span class="stat-value">22</span>
+                                </div>
+                                <div class="comuna-stat">
+                                    <span class="stat-label">Distancia (km)</span>
+                                    <span class="stat-value">45</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Monitoreo Ambiental -->
+            <h2 class="section-title">Monitoreo Ambiental</h2>
+            
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-tint"></i>
+                    <h3>Lixiviados</h3>
+                </div>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Generados Diariamente</div>
+                        <div class="info-value">120 m³</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Tratados</div>
+                        <div class="info-value">85 m³</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Calidad (pH)</div>
+                        <div class="info-value">6.8 <span class="indicator good"></span></div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">DBO</div>
+                        <div class="info-value">250 mg/L <span class="indicator warning"></span></div>
+                    </div>
+                </div>
+                <div class="chart-container" style="height: 200px;">
+                    <canvas id="leachateChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-wind"></i>
+                    <h3>Gases Generados</h3>
+                </div>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Metano (CH₄)</div>
+                        <div class="info-value">55% <span class="indicator good"></span></div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">CO₂</div>
+                        <div class="info-value">40% <span class="indicator good"></span></div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Captura</div>
+                        <div class="info-value">65% <span class="indicator warning"></span></div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Emisiones</div>
+                        <div class="info-value">35% <span class="indicator danger"></span></div>
+                    </div>
+                </div>
+                <div class="chart-container" style="height: 200px;">
+                    <canvas id="gasChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-vial"></i>
+                    <h3>Calidad de Agua y Suelo</h3>
+                </div>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Parámetro</th>
+                            <th>Valor</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>pH Agua Subterránea</td>
+                            <td>7.2</td>
+                            <td><span class="indicator good"></span> Normal</td>
+                        </tr>
+                        <tr>
+                            <td>Metales Pesados (suelo)</td>
+                            <td>0.05 mg/kg</td>
+                            <td><span class="indicator good"></span> Normal</td>
+                        </tr>
+                        <tr>
+                            <td>Nitratos (agua)</td>
+                            <td>12 mg/L</td>
+                            <td><span class="indicator warning"></span> Atención</td>
+                        </tr>
+                        <tr>
+                            <td>Conductividad (suelo)</td>
+                            <td>450 μS/cm</td>
+                            <td><span class="indicator good"></span> Normal</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-compress-arrows-alt"></i>
+                    <h3>Compactación y Cobertura</h3>
+                </div>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Densidad Promedio</div>
+                        <div class="info-value">0.85 t/m³</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Cobertura Diaria</div>
+                        <div class="info-value">95% <span class="indicator good"></span></div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Material Disponible</div>
+                        <div class="info-value">700,000 m³</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Eficiencia</div>
+                        <div class="info-value">88% <span class="indicator good"></span></div>
+                    </div>
+                </div>
+                <div class="progress-container">
+                    <div class="progress-label">
+                        <span>Eficiencia de Compactación</span>
+                        <span>88%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 88%"></div>
+                    </div>
+                </div>
+            </div>
+                        <!-- Tipos de Residuos -->
+            <div class="card" style="grid-column: 1 / -1;">
+                <div class="card-header">
+                    <i class="fas fa-stream"></i>
+                    <h3>Tipos de Residuos Recibidos</h3>
+                </div>
+                <div class="chart-container">
+                    <canvas id="wasteTypeChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- Instalaciones -->
+            <h2 class="section-title">Instalaciones</h2>
+            
+            <div class="card" style="grid-column: 1 / -1;">
+                <div class="card-header">
+                    <i class="fas fa-list"></i>
+                    <h3>Listado de Instalaciones</h3>
+                </div>
+                <div class="tabs">
+                    <button class="tab-btn active" data-tab="all">Todas</button>
+                    <button class="tab-btn" data-tab="operations">Operaciones</button>
+                    <button class="tab-btn" data-tab="treatment">Tratamiento</button>
+                    <button class="tab-btn" data-tab="support">Soporte</button>
+                </div>
+                
+                <div class="tab-content active" id="all-tab">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Instalación</th>
+                                <th>Tipo</th>
+                                <th>Progreso</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>01</td>
+                                <td>Vertedero Actual</td>
+                                <td>Operaciones</td>
+                                <td>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: 88%"></div>
+                                </div>
+                                </td>
+                                <td><span class="status-badge status-completed">Operativo</span></td>
+                            </tr>
+                            <tr>
+                                <td>02</td>
+                                <td>Zona de Disposición</td>
+                                <td>Operaciones</td>
+                                                                <td>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: 78%"></div>
+                                </div>
+                                </td>
+                                <td><span class="status-badge status-completed">Operativo</span></td>
+                            </tr>
+                            <tr>
+                                <td>03</td>
+                                <td>Caseta Guardia</td>
+                                <td>Soporte</td>
+                                                                <td>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: 68%"></div>
+                                </div>
+                                </td>
+                                <td><span class="status-badge status-completed">Operativo</span></td>
+                            </tr>
+                            <tr>
+                                <td>04</td>
+                                <td>Báscula</td>
+                                <td>Operaciones</td>
+                                                                <td>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: 58%"></div>
+                                </div>
+                                </td>
+                                <td><span class="status-badge status-completed">Operativo</span></td>
+                            </tr>
+                            <tr>
+                                <td>05</td>
+                                <td>Abastecedora de Combustible</td>
+                                <td>Soporte</td>
+                                                                <td>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: 48%"></div>
+                                </div>
+                                </td>
+                                <td><span class="status-badge status-construction">En Construcción</span></td>
+                            </tr>
+                            <tr>
+                                <td>06</td>
+                                <td>Oficina Administrativa</td>
+                                <td>Soporte</td>
+                                                                <td>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: 38%"></div>
+                                </div>
+                                </td>
+                                <td><span class="status-badge status-completed">Operativo</span></td>
+                            </tr>
+                            <tr>
+                                <td>07</td>
+                                <td>Estanque Acumulación</td>
+                                <td>Tratamiento</td>
+                                                                <td>
+                                <div class="progress-bar">
+                                    <div class progress-fill" style="width: 28%"></div>
+                                </div>
+                                </td>
+                                <td><span class="status-badge status-completed">Operativo</span></td>
+                            </tr>
+                            <tr>
+                                <td>14</td>
+                                <td>Tratamiento Lixiviados</td>
+                                <td>Tratamiento</td>
+                                                                <td>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: 18%"></div>
+                                </div>
+                                </td>
+                                <td><span class="status-badge status-completed">Operativo</span></td>
+                            </tr>
+                            <tr>
+                                <td>09</td>
+                                <td>Laboratorio</td>
+                                <td>Soporte</td>
+                                                                <td>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: 15%"></div>
+                                </div>
+                                </td>
+                                <td><span class="status-badge status-completed">Operativo</span></td>
+                            </tr>
+                            <tr>
+                                <td>19</td>
+                                <td>Laguna Almacenamiento Lixiviados Crudos</td>
+                                <td>Tratamiento</td>
+                                                                <td>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: 2%"></div>
+                                </div>
+                                </td>
+                                <td><span class="status-badge status-construction">En Construcción</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+            
+
+        <!-- Footer -->
+        <footer>
+            <div class="footer-content">
+                <div class="footer-logo">
+                    <h3>Relleno Sanitario Los Ríos</h3>
+                    <p>Proyecto comprometido con el manejo responsable de residuos y el cuidado del medio ambiente en la Región de Los Ríos.</p>
+                </div>
+                
+
+                <div class="footer-bottom">
+                    <div class="footer-partners">
+                        <img src="https://munivaldivia.cl/wp-content/uploads/2024/10/logo-blanco.svg" class="partner-logo" alt="Municipalidad de Valdivia">
+                        <img src="https://soarblue.cl/logo/logo-soarblue-W.svg" class="partner-logo" alt="Soarblue">
+
+                    </div>
+                    
+                    <div class="footer-copyright">
+                        © 2025 Relleno Sanitario Los Ríos. Todos los derechos reservados.
+                    </div>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Datos para los puntos de interés
+        const locationData = {
+            entrada: {
+                title: "Entrada Principal",
+                description: "Punto de acceso principal al relleno sanitario. Control de ingreso y egreso de vehículos. Instalación equipada con cámaras de vigilancia y sistema de pesaje preliminar.",
+                images: [
+                    "https://www.diariosostenible.cl/files/649ce89977c6d_890x533.jpg",
+                    "https://www.diariosostenible.cl/files/649ce89977c6d_890x533.jpg"
+                ]
+            },
+            oficina: {
+                title: "Oficina Administrativa",
+                description: "Centro de administración y gestión del relleno sanitario. Equipada con tecnología de punta para el monitoreo en tiempo real de todas las operaciones. Sistema de control centralizado con pantallas de visualización de datos. Espacios de trabajo modernos y sala de reuniones.",
+                images: [
+                    "https://www.diariosostenible.cl/files/649ce89977c6d_890x533.jpg",
+                    "https://www.diariosostenible.cl/files/649ce89977c6d_890x533.jpg"
+                ]
+            },
+            bascula: {
+                title: "Báscula de Pesaje",
+                description: "Sistema de pesaje digital de alta precisión para camones de residuos. Registro automático de entradas y salidas con identificación de transportistas. Integrado con el sistema central de monitoreo para el control de tonelaje recibido diariamente. Capacidad de pesaje de hasta 60 toneladas.",
+                images: [
+                    "https://www.diariosostenible.cl/files/649ce89977c6d_890x533.jpg",
+                    "https://www.diariosostenible.cl/files/649ce89977c6d_890x533.jpg"
+                ]
+            },
+            vertedero: {
+                title: "Vertedero Actual",
+                description: "Área activa de disposición de residuos. Sistema de celdas con geomembrana de HDPE de 1.5 mm de espesor para impermeabilización. Maquinaria especializada para compactación y cobertura diaria. Sistema de drenaje de lixiviados y captación de biogás integrado.",
+                images: [
+                    "https://www.diariosostenible.cl/files/649ce89977c6d_890x533.jpg",
+                    "https://www.diariosostenible.cl/files/649ce89977c6d_890x533.jpg"
+                ]
+            },
+            tratamiento: {
+                title: "Planta de Tratamiento de Lixiviados",
+                description: "Instalación de tratamiento de lixiviados con tecnología de oxidación avanzada y ultrafiltración. Capacidad de procesamiento de 100 m³ por día. Sistema automatizado de control de pH and dosificación de reactivos. Monitoreo continuo de parámetros de calidad del efluente tratado.",
+                images: [
+                    "https://www.diariosostenible.cl/files/649ce89977c6d_890x533.jpg",
+                    "https://www.diariosostenible.cl/files/649ce89977c6d_890x533.jpg"
+                ]
+            },
+            laboratorio: {
+                title: "Laboratorio de Control Ambiental",
+                description: "Laboratorio equipado para análisis de calidad de agua, suelo y aire. Mediciones de parámetros fisicoquímicos y microbiológicos. Monitoreo de emisiones gaseosas y calidad of lixiviados. Personal técnico especializado en análisis ambientales.",
+                images: [
+                    "https://www.diariosostenible.cl/files/649ce89977c6d_890x533.jpg",
+                    "https://www.diariosostenible.cl/files/649ce89977c6d_890x533.jpg"
+                ]
+            }
+        };
+
+        // Inicializar el mapa
+        function initMap() {
+            // Coordenadas del relleno sanitario
+            const sanitarioCoords = [-39.97886483749844, -73.13534605732914];
+            
+            // Crear mapa centrado en el relleno sanitario
+            const map = L.map('map').setView(sanitarioCoords, 15);
+            
+            // Capa satelital
+            const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                maxZoom: 18,
+                attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+            });
+            
+            // Capa de mapa estándar
+            const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            });
+            
+            // Añadir capa satelital por defecto
+            satelliteLayer.addTo(map);
+            
+            // Control de capas base
+            const baseLayers = {
+                "Vista Satelital": satelliteLayer,
+                "Mapa Carreteras": osmLayer
+            };
+            
+            L.control.layers(baseLayers).addTo(map);
+            
+            // Icono personalizado
+            const sanitarioIcon = L.icon({
+                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+                iconSize: [25, 41],
+                iconAnchor: [12, 41],
+                popupAnchor: [1, -34]
+            });
+            
+            // Marcador del relleno sanitario
+            const marker = L.marker(sanitarioCoords, {icon: sanitarioIcon})
+                .addTo(map)
+                .bindPopup(`
+                    <div style="text-align: center;">
+                        <h3 style="margin: 0 0 10px; color: #2c3e50;">Relleno Sanitario Los Ríos</h3>
+                        <p style="margin: 5px 0;"><strong>Ubicación:</strong> Morrompulli, Valdivia</p>
+                        <p style="margin: 5px 0;"><strong>Área:</strong> 90.8 hectáreas</p>
+                        <p style="margin: 5px 0;"><strong>Estado:</strong> En construcción</p>
+                    </div>
+                `);
+            
+            // Definir límite del vertedero (polígono rojo)
+            const vertederoBoundary = L.polygon([
+                [-39.97746005363169, -73.13818523182604],
+                [-39.97492090483824, -73.13278636408852],
+                [-39.977344639824096, -73.12865032163725],
+                [-39.980735948880614, -73.12910215820756],
+                [-39.98195216269431, -73.13321502955267],
+                [-39.98365660109875, -73.12837226836321],
+                [-39.986984740272014, -73.131903941041],
+
+            ], {
+                color: 'red',
+                weight: 3,
+                fillColor: 'rgba(255, 0, 0, 0.1)',
+                fillOpacity: 0.3
+            }).addTo(map);
+            
+            // Definir área de obras (rectángulo azul)
+            const constructionArea = L.polygon([
+                [-39.97749203557934, -73.13804887650166],
+                [-39.976404281838704, -73.13538196991804],
+                [-39.979486205802004, -73.13121492838111],
+                [-39.979712812372306, -73.13614547946415],
+
+            ], {
+                color: 'blue',
+                weight: 2,
+                fillColor: 'rgba(0, 0, 255, 0.2)',
+                fillOpacity: 0.4
+            }).addTo(map);
+            
+            // Añadir marcador para Valdivia
+            const valdiviaCoords = [-39.8142, -73.2459];
+            const valdiviaIcon = L.icon({
+                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+                iconSize: [25, 41],
+                iconAnchor: [12, 41],
+                popupAnchor: [1, -34]
+            });
+            
+            L.marker(valdiviaCoords, {icon: valdiviaIcon})
+                .addTo(map)
+                .bindPopup(`
+                    <div style="text-align: center;">
+                        <h3 style="margin: 0 0 10px; color: #2c3e50;">Valdivia</h3>
+                        <p style="margin: 5px 0;">Ciudad principal de la región</p>
+                    </div>
+                `);
+            
+            // Añadir línea que muestra la ruta de acceso
+            const routeCoordinates = [
+                valdiviaCoords,
+                [-39.8500, -73.2300],
+                [-39.8900, -73.2000],
+                [-39.9200, -73.1800],
+                sanitarioCoords
+            ];
+            
+            const routeLine = L.polyline(routeCoordinates, {
+                color: '#3498db',
+                weight: 4,
+                opacity: 0.7,
+                dashArray: '10, 10'
+            }).addTo(map);
+            
+            // Definir ubicaciones de puntos de interés
+            const locations = {
+                entrada: [-39.97679078587905, -73.13677813546609],
+                oficina: [-39.978467161583126, -73.1374256675172],
+                bascula: [-39.977817041996474, -73.13744429532264],
+                vertedero: [-39.97895736670563, -73.13760575362626],
+                tratamiento: [-39.97692343919287, -73.13563468082415],
+                laboratorio: [-39.9794944460541, -73.13723159867763],
+            };
+            
+            // Añadir marcadores para puntos de interés con popup mejorado
+            Object.keys(locations).forEach(key => {
+                const marker = L.marker(locations[key], {
+                    icon: L.icon({
+                        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+                        iconSize: [20, 32],
+                        iconAnchor: [10, 32],
+                        popupAnchor: [1, -28]
+                    })
+                }).addTo(map);
+                
+                // Asignar evento de clic para mostrar el info box
+                marker.on('click', function() {
+                    showMapInfoBox(key);
+                });
+                
+                // Popup con información básica
+                marker.bindPopup(`
+                    <div style="text-align: center; min-width: 200px;">
+                        <h4 style="margin: 0 0 10px; color: #2c3e50;">${getLocationName(key)}</h4>
+                        <p style="margin: 0; font-size: 0.9rem;">Haga clic para más información</p>
+                    </div>
+                `);
+            });
+            
+            // Función para obtener nombre legible de ubicación
+            function getLocationName(key) {
+                const names = {
+                    entrada: "Entrada Principal",
+                    oficina: "Oficina Administrativa",
+                    bascula: "Báscula",
+                    vertedero: "Vertedero Actual",
+                    tratamiento: "Tratamiento de Lixiviados",
+                    laboratorio: "Laboratorio"
+                };
+                return names[key] || key;
+            }
+            
+            // Navegación a puntos específicos
+            document.querySelectorAll('.map-nav-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const locationKey = this.getAttribute('data-location');
+                    if (locations[locationKey]) {
+                        map.setView(locations[locationKey], 16);
+                        
+                        // Abrir popup del marcador correspondiente
+                        map.eachLayer(layer => {
+                            if (layer instanceof L.Marker && 
+                                layer.getLatLng().lat === locations[locationKey][0] && 
+                                layer.getLatLng().lng === locations[locationKey][1]) {
+                                layer.openPopup();
+                            }
+                        });
+                        
+                        // Mostrar info box con información de la ubicación
+                        showMapInfoBox(locationKey);
+                    }
+                });
+            });
+            
+            // Sistema de capas
+            const layers = {
+                vertedero: vertederoBoundary,
+                obras: constructionArea,
+                rutas: routeLine
+            };
+            
+            document.querySelectorAll('.control-item input').forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    const layerId = this.id.replace('layer-', '');
+                    if (layers[layerId]) {
+                        if (this.checked) {
+                            map.addLayer(layers[layerId]);
+                        } else {
+                            map.removeLayer(layers[layerId]);
+                        }
+                    }
+                });
+            });
+        }
+        
+        // Función para mostrar info box en el mapa
+        function showMapInfoBox(locationKey) {
+            const infoBox = document.getElementById('mapInfoBox');
+            const infoTitle = document.getElementById('infoTitle');
+            const infoDescription = document.getElementById('infoDescription');
+            const infoGallery = document.getElementById('infoGallery');
+            
+            const data = locationData[locationKey];
+            
+            if (data) {
+                infoTitle.textContent = data.title;
+                infoDescription.textContent = data.description;
+                
+                // Limpiar galería
+                infoGallery.innerHTML = '';
+                
+                // Agregar imágenes a la galería
+                data.images.forEach(imgSrc => {
+                    const img = document.createElement('img');
+                    img.src = imgSrc;
+                    img.alt = data.title;
+                    infoGallery.appendChild(img);
+                });
+                
+                // Mostrar info box
+                infoBox.style.display = 'block';
+            }
+        }
+        
+        // Inicializar gráficos
+        function initCharts() {
+            // Gráfico de camiones en el tiempo
+            const trucksCtx = document.getElementById('trucksChart').getContext('2d');
+            new Chart(trucksCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
+                    datasets: [
+                        {
+                            label: 'Camiones de Valdivia',
+                            data: [42, 45, 48, 43, 47, 50, 52, 48, 45, 47, 49, 46],
+                            borderColor: '#0a4d68',
+                            backgroundColor: 'rgba(10, 77, 104, 0.1)',
+                            tension: 0.4,
+                            fill: true,
+                            borderWidth: 3,
+                            pointBackgroundColor: '#fff',
+                            pointBorderWidth: 2,
+                            pointRadius: 5,
+                            pointHoverRadius: 7
+                        },
+                        {
+                            label: 'Camiones de Otras Comunas',
+                            data: [35, 38, 40, 36, 42, 45, 48, 44, 40, 43, 45, 41],
+                            borderColor: '#05bfdb',
+                            backgroundColor: 'rgba(5, 191, 219, 0.1)',
+                            tension: 0.4,
+                            fill: true,
+                            borderWidth: 3,
+                            pointBackgroundColor: '#fff',
+                            pointBorderWidth: 2,
+                            pointRadius: 5,
+                            pointHoverRadius: 7
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Evolución de Camiones por Mes',
+                            font: { size: 16, weight: 'bold' },
+                            color: '#0a4d68'
+                        },
+                        legend: {
+                            position: 'top',
+                            labels: { font: { size: 14 } }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Número de Camiones',
+                                color: '#0a4d68',
+                                font: { weight: 'bold' }
+                            },
+                            grid: { color: 'rgba(0, 0, 0, 0.05)' },
+                            ticks: { font: { size: 12 } }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { font: { size: 12 } }
+                        }
+                    }
+                }
+            });
+            
+            // Gráfico de lixiviados
+            const leachateCtx = document.getElementById('leachateChart').getContext('2d');
+            new Chart(leachateCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Tratados', 'Por Tratar'],
+                    datasets: [{
+                        data: [85, 35],
+                        backgroundColor: ['#00ffca', '#ff6b6b'],
+                        borderWidth: 0,
+                        hoverOffset: 15
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Lixiviados (m³/día)',
+                            font: { size: 16, weight: 'bold' },
+                            color: '#0a4d68'
+                        },
+                        legend: {
+                            position: 'bottom',
+                            labels: { font: { size: 12 } }
+                        }
+                    },
+                    cutout: '70%'
+                }
+            });
+            
+            // Gráfico de gases
+            const gasCtx = document.getElementById('gasChart').getContext('2d');
+            new Chart(gasCtx, {
+                type: 'pie',
+                data: {
+                    labels: ['Metano (CH₄)', 'Dióxido de Carbono (CO₂)', 'Otros Gases'],
+                    datasets: [{
+                        data: [55, 40, 5],
+                        backgroundColor: ['#0a4d68', '#05bfdb', '#00ffca'],
+                        borderWidth: 0,
+                        hoverOffset: 15
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Composición de Biogás (%)',
+                            font: { size: 16, weight: 'bold' },
+                            color: '#0a4d68'
+                        },
+                        legend: {
+                            position: 'bottom',
+                            labels: { font: { size: 12 } }
+                        }
+                    }
+                }
+            });
+            // Gráfico de tipos de residuos
+            const wasteTypeCtx = document.getElementById('wasteTypeChart').getContext('2d');
+            new Chart(wasteTypeCtx, {
+                type: 'polarArea',
+                data: {
+                    labels: ['Orgánicos', 'Plásticos', 'Papel/Cartón', 'Vidrio', 'Metales', 'Otros'],
+                    datasets: [{
+                        data: [45, 18, 12, 8, 5, 12],
+                        backgroundColor: [
+                            '#1a5f7a', '#159895', '#57cc99', '#ffd166', '#f4845f', '#f25c54'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Composición de Residuos (%)'
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Inicializar el mapa y gráficos al cargar la página
+        window.addEventListener('load', function() {
+            initMap();
+            initCharts();
+            
+            // Toggle sidebar on mobile
+            document.querySelector('.menu-toggle').addEventListener('click', function() {
+                document.querySelector('.sidebar').classList.toggle('active');
+            });
+            
+            // Sistema de pestañas
+            document.querySelectorAll('.tab-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const tabId = this.getAttribute('data-tab');
+                    
+                    // Desactivar todas las pestañas
+                    this.parentElement.querySelectorAll('.tab-btn').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    
+                    // Desactivar todos los contenidos
+                    this.closest('.card').querySelectorAll('.tab-content').forEach(content => {
+                        content.classList.remove('active');
+                    });
+                    
+                    // Activar la pestaña seleccionada
+                    this.classList.add('active');
+                    document.getElementById(`${tabId}-tab`).classList.add('active');
+                });
+            });
+            
+            // Cerrar info box
+            document.querySelector('.close-info').addEventListener('click', function() {
+                document.getElementById('mapInfoBox').style.display = 'none';
+            });
+        });
+    </script>
+</body>
+</html>
