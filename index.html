@@ -42,8 +42,104 @@
             overflow-x: hidden;
         }
 
-        .leaflet-container .leaflet-control-attribution {
+.leaflet-container .leaflet-control-attribution {
             display: none !important;
+        }
+
+        /* Popup personalizado */
+        .custom-popup .leaflet-popup-content-wrapper {
+            border-radius: 12px;
+            overflow: hidden;
+            background: white;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        }
+        
+        .custom-popup .leaflet-popup-content {
+            margin: 0;
+            width: 300px !important;
+            padding: 0;
+        }
+        
+        .popup-content {
+            padding: 1rem;
+        }
+        
+        .popup-content img {
+            width: 100%;
+            height: 160px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-bottom: 0.8rem;
+        }
+        
+        .popup-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+        
+        .popup-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+            margin-bottom: 0.8rem;
+            font-size: 0.85rem;
+            color: var(--text-light);
+        }
+        
+        .popup-meta span {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .popup-meta i {
+            width: 16px;
+            color: var(--secondary);
+        }
+        
+        .popup-specs {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.8rem;
+            margin-bottom: 0.8rem;
+        }
+        
+        .popup-spec {
+            text-align: center;
+            padding: 0.5rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .popup-spec-label {
+            display: block;
+            font-size: 0.7rem;
+            color: var(--text-light);
+            margin-bottom: 0.2rem;
+        }
+        
+        .popup-spec-value {
+            display: block;
+            font-weight: 600;
+            color: var(--primary);
+            font-size: 0.9rem;
+        }
+        
+        .tech-title {
+            font-size: 0.85rem;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.8rem;
+            padding-top: 0.8rem;
+            border-top: 1px solid #eee;
+        }
+        
+        .tech-title i {
+            color: var(--secondary);
         }
 
         /* Sidebar Navigation */
@@ -2149,18 +2245,33 @@
                 iconAnchor: [12, 41],
                 popupAnchor: [1, -34]
             });
+         
+
+
+
+            // Icono personalizado para puntos de interés
+            const locationIcon = L.icon({
+                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+                iconSize: [20, 32],
+                iconAnchor: [10, 32],
+                popupAnchor: [1, -28]
+            });
             
             // Marcador del relleno sanitario
             const marker = L.marker(sanitarioCoords, {icon: sanitarioIcon})
                 .addTo(map)
                 .bindPopup(`
-                    <div style="text-align: center;">
-                        <h3 style="margin: 0 0 10px; color: #2c3e50;">Relleno Sanitario Los Ríos</h3>
-                        <p style="margin: 5px 0;"><strong>Ubicación:</strong> Morrompulli, Valdivia</p>
-                        <p style="margin: 5px 0;"><strong>Área:</strong> 90.8 hectáreas</p>
-                        <p style="margin: 5px 0;"><strong>Estado:</strong> En construcción</p>
+                    <div class="popup-content">
+                        <img src="https://www.diariosostenible.cl/files/649ce89977c6d_890x533.jpg" alt="Relleno Sanitario Los Ríos">
+                        <div class="popup-title">Relleno Sanitario Los Ríos</div>
+   
+                        
+                      
                     </div>
-                `);
+                `, {
+                    className: 'custom-popup',
+                    maxWidth: 320
+                });
             
             // Definir límite del vertedero (polígono rojo)
             const vertederoBoundary = L.polygon([
@@ -2171,7 +2282,6 @@
                 [-39.98195216269431, -73.13321502955267],
                 [-39.98365660109875, -73.12837226836321],
                 [-39.986984740272014, -73.131903941041],
-
             ], {
                 color: 'red',
                 weight: 3,
@@ -2185,7 +2295,6 @@
                 [-39.976404281838704, -73.13538196991804],
                 [-39.979486205802004, -73.13121492838111],
                 [-39.979712812372306, -73.13614547946415],
-
             ], {
                 color: 'blue',
                 weight: 2,
@@ -2205,11 +2314,16 @@
             L.marker(valdiviaCoords, {icon: valdiviaIcon})
                 .addTo(map)
                 .bindPopup(`
-                    <div style="text-align: center;">
-                        <h3 style="margin: 0 0 10px; color: #2c3e50;">Valdivia</h3>
-                        <p style="margin: 5px 0;">Ciudad principal de la región</p>
+                    <div class="popup-content">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Valdivia_center.jpg/800px-Valdivia_center.jpg" alt="Valdivia">
+                        <div class="popup-title">Valdivia</div>
+
+                       
                     </div>
-                `);
+                `, {
+                    className: 'custom-popup',
+                    maxWidth: 320
+                });
             
             // Añadir línea que muestra la ruta de acceso
             const routeCoordinates = [
@@ -2237,31 +2351,31 @@
                 laboratorio: [-39.9794944460541, -73.13723159867763],
             };
             
-            // Añadir marcadores para puntos de interés con popup mejorado
-            Object.keys(locations).forEach(key => {
-                const marker = L.marker(locations[key], {
-                    icon: L.icon({
-                        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-                        iconSize: [20, 32],
-                        iconAnchor: [10, 32],
-                        popupAnchor: [1, -28]
-                    })
-                }).addTo(map);
+              // Añadir marcadores para puntos de interés con popup personalizado
+                        Object.keys(locations).forEach(key => {
+                            const data = locationData[key];
+                            const marker = L.marker(locations[key], {
+                                icon: locationIcon,
+                                title: data.title
+                            }).addTo(map);
+                            
+                            // Crear contenido para el popup
+                            const popupContent = `
+                                <div class="popup-content">
+                                    <img src="${data.images[0]}" alt="${data.title}">
+                                    <div class="popup-title">${data.title}</div>
+                                   
+
+                                    
+                                </div>
+                            `;
                 
-                // Asignar evento de clic para mostrar el info box
-                marker.on('click', function() {
-                    showMapInfoBox(key);
+                // Asignar popup personalizado
+                marker.bindPopup(popupContent, {
+                    className: 'custom-popup',
+                    maxWidth: 320
                 });
-                
-                // Popup con información básica
-                marker.bindPopup(`
-                    <div style="text-align: center; min-width: 200px;">
-                        <h4 style="margin: 0 0 10px; color: #2c3e50;">${getLocationName(key)}</h4>
-                        <p style="margin: 0; font-size: 0.9rem;">Haga clic para más información</p>
-                    </div>
-                `);
             });
-            
             // Función para obtener nombre legible de ubicación
             function getLocationName(key) {
                 const names = {
