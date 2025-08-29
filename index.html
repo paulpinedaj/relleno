@@ -3,11 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Relleno Sanitario Los Ríos - Dashboard Inteligente</title>
+    <title>Relleno Sanitario Los Ríos - Dashboard</title>
+
+
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    
     <style>
         :root {
             --primary: #0a4d68;
@@ -141,6 +150,9 @@
         .tech-title i {
             color: var(--secondary);
         }
+
+
+
 
         /* Sidebar Navigation */
         .sidebar {
@@ -405,7 +417,7 @@
         
         .map-overlay {
             position: absolute;
-            top: 15px;
+            bottom: 15px;
             left: 15px;
             background: rgba(255, 255, 255, 0.95);
             padding: 1rem;
@@ -423,7 +435,7 @@
         }
         
         .map-overlay p {
-            font-size: 0.85rem;
+            font-size: 0.7rem;
             color: var(--text-light);
             line-height: 1.5;
         }
@@ -431,7 +443,7 @@
         /* Map controls */
         .map-controls {
             position: absolute;
-            top: 15px;
+            bottom: 15px;
             right: 15px;
             background: rgba(255, 255, 255, 0.95);
             padding: 1rem;
@@ -452,7 +464,7 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            margin-bottom: 0.8rem;
+            margin-bottom: 0.2rem;
         }
         
         .control-item:last-child {
@@ -464,7 +476,7 @@
         }
         
         .control-item label {
-            font-size: 0.9rem;
+            font-size: 0.8rem;
             color: var(--text);
             cursor: pointer;
         }
@@ -1319,7 +1331,7 @@
                 <div id="map"></div>
                 <div class="map-overlay">
                     <h4>Relleno Sanitario Los Ríos</h4>
-                    <p>Ubicado en el sector de Morrompulli, a 25 km al sur de Valdivia por la Ruta T-60. Instalación de vanguardia en gestión de residuos.</p>
+                    <p>Ubicado en el sector de Morrompulli, a 25 km al sur de Valdivia por la Ruta T-60. </p>
                 </div>
                 
                 <div class="map-controls">
@@ -2213,18 +2225,30 @@
             const sanitarioCoords = [-39.97886483749844, -73.13534605732914];
             
             // Crear mapa centrado en el relleno sanitario
-            const map = L.map('map').setView(sanitarioCoords, 15);
+            const map = L.map('map', {
+                preferCanvas: true, // Usar canvas para mejor rendimiento
+                zoomSnap: 0.1,     // Permitir zoom intermedio
+                zoomDelta: 0.3     // Control de velocidad de zoom
+            }).setView(sanitarioCoords, 15);
+            
+            // Solución para problemas de renderizado: forzar redibujado en eventos
+            map.on('moveend', function() {
+                window.setTimeout(function() {
+                    map.invalidateSize();
+                }, 100);
+            });
+            
             
             // Capa satelital
             const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
                 maxZoom: 18,
-                attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+                attribution: ''
             });
             
             // Capa de mapa estándar
             const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                attribution: ''
             });
             
             // Añadir capa satelital por defecto
@@ -2246,8 +2270,6 @@
                 popupAnchor: [1, -34]
             });
          
-
-
 
             // Icono personalizado para puntos de interés
             const locationIcon = L.icon({
@@ -2432,34 +2454,7 @@
             });
         }
         
-        // Función para mostrar info box en el mapa
-        function showMapInfoBox(locationKey) {
-            const infoBox = document.getElementById('mapInfoBox');
-            const infoTitle = document.getElementById('infoTitle');
-            const infoDescription = document.getElementById('infoDescription');
-            const infoGallery = document.getElementById('infoGallery');
-            
-            const data = locationData[locationKey];
-            
-            if (data) {
-                infoTitle.textContent = data.title;
-                infoDescription.textContent = data.description;
-                
-                // Limpiar galería
-                infoGallery.innerHTML = '';
-                
-                // Agregar imágenes a la galería
-                data.images.forEach(imgSrc => {
-                    const img = document.createElement('img');
-                    img.src = imgSrc;
-                    img.alt = data.title;
-                    infoGallery.appendChild(img);
-                });
-                
-                // Mostrar info box
-                infoBox.style.display = 'block';
-            }
-        }
+       
         
         // Inicializar gráficos
         function initCharts() {
